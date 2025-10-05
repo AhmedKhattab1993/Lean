@@ -77,6 +77,9 @@ namespace QuantConnect.Configuration
                 new CommandLineOption("map-file-provider", CommandOptionType.SingleValue),
                 new CommandLineOption("factor-file-provider", CommandOptionType.SingleValue),
                 new CommandLineOption("data-provider", CommandOptionType.SingleValue),
+                new CommandLineOption("data-provider-historical", CommandOptionType.SingleValue),
+                new CommandLineOption("data-provider-live", CommandOptionType.SingleValue),
+                new CommandLineOption("data-provider-event", CommandOptionType.SingleValue),
                 new CommandLineOption("alpha-handler", CommandOptionType.SingleValue),
                 new CommandLineOption("history-provider", CommandOptionType.SingleValue),
 
