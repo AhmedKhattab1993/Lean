@@ -342,6 +342,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     }
                     return false;
                 })
+                .OrderBy(baseData => baseData.Time)
                 // for canonical symbols, downloader will return data for all of the chain
                 .GroupBy(baseData => baseData.Symbol);
         }
