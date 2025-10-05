@@ -41,6 +41,7 @@ namespace QuantConnect.Configuration
                                                      + "/CoarseUniverseGenerator or CUG/\n"
                                                      + "RandomDataGenerator or RDG\n"
                                                      + "Example 1: --app=RDG"),
+                new CommandLineOption("config", CommandOptionType.SingleValue, "[OPTIONAL] Path to custom Lean configuration file"),
                 new CommandLineOption("tickers", CommandOptionType.MultipleValue, "[REQUIRED ALL downloaders] "
                                                                                   + "--tickers=SPY,AAPL,etc"),
                 new CommandLineOption("resolution", CommandOptionType.SingleValue, "[REQUIRED ALL downloaders]"

@@ -34,9 +34,18 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <ResolveDuplicatePublishOutputs>Exclude</ResolveDuplicatePublishOutputs>
+    <NoWarn>CA1031;CA1724;CA1822;CA1851</NoWarn>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Common\Properties\SharedAssemblyInfo.cs" Link="Properties\SharedAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="..\Common\AlgorithmImports.py" />
+    <Content Remove="..\Common\PandasMapper.py" />
+    <None Remove="..\Common\AlgorithmImports.py" />
+    <None Remove="..\Common\PandasMapper.py" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\LICENSE">
@@ -52,5 +61,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Engine\QuantConnect.Lean.Engine.csproj" />
+    <ProjectReference Include="..\..\LeanDataSource.Polygon\QuantConnect.Polygon\QuantConnect.DataSource.Polygon.csproj" />
   </ItemGroup>
 </Project>

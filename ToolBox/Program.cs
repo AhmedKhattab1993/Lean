@@ -13,7 +13,10 @@
  * limitations under the License.
 */
 using QuantConnect.Configuration;
+using QuantConnect.Data;
+using QuantConnect.Data.Market;
 using QuantConnect.Interfaces;
+using QuantConnect.Lean.DataSource.Polygon;
 using QuantConnect.Logging;
 using QuantConnect.ToolBox.AlgoSeekFuturesConverter;
 using QuantConnect.ToolBox.CoarseUniverseGenerator;
@@ -22,6 +25,8 @@ using QuantConnect.ToolBox.RandomDataGenerator;
 using QuantConnect.Util;
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using static QuantConnect.Configuration.ApplicationParser;
 
 namespace QuantConnect.ToolBox
@@ -30,6 +35,19 @@ namespace QuantConnect.ToolBox
     {
         public static void Main(string[] args)
         {
+            var optionsObject = ToolboxArgumentParser.ParseArguments(args);
+
+            if (optionsObject.TryGetValue("config", out var configValue))
+            {
+                var configPath = configValue?.ToString();
+                if (!string.IsNullOrWhiteSpace(configPath))
+                {
+                    Config.SetConfigurationFile(configPath);
+                    Config.Reset();
+                }
+                optionsObject.Remove("config");
+            }
+
             Log.DebuggingEnabled = Config.GetBool("debug-mode");
             var destinationDir = Config.Get("results-destination-folder");
             if (!string.IsNullOrEmpty(destinationDir))
@@ -39,7 +57,6 @@ namespace QuantConnect.ToolBox
             }
             Log.LogHandler = Composer.Instance.GetExportedValueByTypeName<ILogHandler>(Config.Get("log-handler", "CompositeLogHandler"));
 
-            var optionsObject = ToolboxArgumentParser.ParseArguments(args);
             if (optionsObject.Count == 0)
             {
                 PrintMessageAndExit();
@@ -68,6 +85,12 @@ namespace QuantConnect.ToolBox
                     : DateTime.UtcNow;
                 switch (targetApp)
                 {
+                    case "polygondatadownloader":
+                    case "polygondl":
+                    case "polygon":
+                        RunPolygonDataDownloader(tickers, market, securityType, resolution, fromDate, toDate);
+                        break;
+
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
@@ -121,6 +144,87 @@ namespace QuantConnect.ToolBox
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
                 }
+            }
+        }
+
+        private static void RunPolygonDataDownloader(List<string> tickers, string market, string securityType, string resolution, DateTime fromDate, DateTime toDate)
+        {
+            if (tickers == null || tickers.Count == 0)
+            {
+                PrintMessageAndExit(1, "ERROR: --tickers is required for PolygonDataDownloader");
+            }
+
+            if (string.IsNullOrWhiteSpace(securityType))
+            {
+                securityType = SecurityType.Equity.ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(resolution))
+            {
+                resolution = Resolution.Minute.ToString();
+            }
+
+            if (!Enum.TryParse(securityType, true, out SecurityType securityTypeEnum))
+            {
+                PrintMessageAndExit(1, $"ERROR: Unsupported security-type '{securityType}'.");
+            }
+
+            if (!Enum.TryParse(resolution, true, out Resolution resolutionEnum))
+            {
+                PrintMessageAndExit(1, $"ERROR: Unsupported resolution '{resolution}'.");
+            }
+
+            if (string.IsNullOrWhiteSpace(market))
+            {
+                market = Market.USA;
+            }
+            else
+            {
+                market = market.ToLowerInvariant();
+            }
+
+            var dataFolder = Config.Get("data-folder", Globals.DataFolder);
+            var tickType = securityTypeEnum switch
+            {
+                SecurityType.Forex => TickType.Quote,
+                SecurityType.Cfd => TickType.Quote,
+                SecurityType.Crypto => TickType.Quote,
+                SecurityType.Option when resolutionEnum == Resolution.Tick => TickType.Trade,
+                _ => TickType.Trade
+            };
+
+            using var downloader = new PolygonDataDownloader();
+
+            foreach (var rawTicker in tickers)
+            {
+                var ticker = rawTicker.Trim();
+                if (string.IsNullOrEmpty(ticker))
+                {
+                    continue;
+                }
+
+                var symbol = Symbol.Create(ticker, securityTypeEnum, market);
+                var start = DateTime.SpecifyKind(fromDate, DateTimeKind.Utc);
+                var end = DateTime.SpecifyKind(toDate, DateTimeKind.Utc);
+
+                var request = new DataDownloaderGetParameters(symbol, resolutionEnum, start, end, tickType);
+                var data = downloader.Get(request);
+
+                if (data == null)
+                {
+                    Log.Error($"PolygonDataDownloader: no data returned for {symbol}");
+                    continue;
+                }
+
+                var orderedData = data.OrderBy(point => point.EndTime).ToList();
+                if (orderedData.Count == 0)
+                {
+                    Log.Error($"PolygonDataDownloader: empty data set for {symbol}");
+                    continue;
+                }
+
+                var writer = new LeanDataWriter(resolutionEnum, symbol, dataFolder, tickType);
+                writer.Write(orderedData);
             }
         }
     }
