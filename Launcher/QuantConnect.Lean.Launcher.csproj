@@ -37,6 +37,8 @@
   </Target>
   <ItemGroup>
     <PackageReference Include="DynamicInterop" Version="0.9.1" />
+    <PackageReference Include="QuantConnect.Brokerages.InteractiveBrokers" Version="2.0.*" />
+    <PackageReference Include="QuantConnect.IBAutomater" Version="2.0.*" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Common\Properties\SharedAssemblyInfo.cs" Link="Properties\SharedAssemblyInfo.cs" />
