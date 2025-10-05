@@ -17,6 +17,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Python.Runtime;
 using QuantConnect.Util;
 using QuantConnect.Logging;
@@ -40,6 +41,7 @@ namespace QuantConnect.Python
         private static List<string> _pendingPathAdditions = new List<string>();
 
         private static string _algorithmLocation;
+        private static IntPtr _allowThreadsState = IntPtr.Zero;
 
         /// <summary>
         /// Initialize python.
@@ -58,7 +60,7 @@ namespace QuantConnect.Python
                 if (beginAllowThreads)
                 {
                     // required for multi-threading usage
-                    PythonEngine.BeginAllowThreads();
+                    _allowThreadsState = PythonEngine.BeginAllowThreads();
                 }
 
                 _isInitialized = true;
@@ -82,8 +84,28 @@ namespace QuantConnect.Python
 
                 try
                 {
-                    var pyLock = Py.GIL();
-                    PythonEngine.Shutdown();
+                    if (_allowThreadsState != IntPtr.Zero)
+                    {
+                        PythonEngine.EndAllowThreads(_allowThreadsState);
+                        _allowThreadsState = IntPtr.Zero;
+                    }
+
+                    // Ensure any pending finalizers complete before shutting down the interpreter
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    try
+                    {
+                        var shutdownTask = Task.Run(() => PythonEngine.Shutdown());
+                        if (!shutdownTask.Wait(TimeSpan.FromSeconds(5)))
+                        {
+                            Log.Debug("PythonEngine.Shutdown(): timeout; continuing without full interpreter teardown");
+                        }
+                    }
+                    catch (Exception inner)
+                    {
+                        Log.Debug($"PythonEngine.Shutdown(): error during shutdown {inner}");
+                    }
                 }
                 catch (Exception ex)
                 {
