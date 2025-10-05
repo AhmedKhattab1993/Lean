@@ -20,6 +20,7 @@ using QuantConnect.Orders;
 using QuantConnect.Logging;
 using System.Threading.Tasks;
 using RestSharp.Authenticators;
+using QuantConnect.Configuration;
 
 namespace QuantConnect.Api
 {
@@ -60,6 +61,11 @@ namespace QuantConnect.Api
         {
             get
             {
+                if (Config.GetBool("skip-api-authentication", false))
+                {
+                    Log.Trace("ApiConnection.Connected: Skipping QuantConnect authentication (skip-api-authentication=true).");
+                    return true;
+                }
                 var request = new RestRequest("authenticate", Method.GET);
                 AuthenticationResponse response;
                 if (TryRequest(request, out response))
@@ -98,6 +104,13 @@ namespace QuantConnect.Api
             T result;
             try
             {
+                if (Config.GetBool("skip-api-authentication", false))
+                {
+                    Log.Trace($"ApiConnection.TryRequest({request.Resource}): Skipping QuantConnect API call (skip-api-authentication=true).");
+                    result = Activator.CreateInstance<T>();
+                    result.Success = true;
+                    return new Tuple<bool, T>(true, result);
+                }
                 SetAuthenticator(request);
 
                 // Execute the authenticated REST API Call
