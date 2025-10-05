@@ -43,12 +43,12 @@ namespace QuantConnect.Data
         /// <summary>
         /// Subscription method implementation
         /// </summary>
-        public Func<IEnumerable<Symbol>, TickType, bool> SubscribeImpl { get; set; }
+        public Func<IEnumerable<Symbol>, TickType, bool> SubscribeImpl;
         
         /// <summary>
         /// Unsubscription method implementation
         /// </summary>
-        public Func<IEnumerable<Symbol>, TickType, bool> UnsubscribeImpl { get; set; }
+        public Func<IEnumerable<Symbol>, TickType, bool> UnsubscribeImpl;
 
         /// <summary>
         /// Socket channel name
