@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using ProtoBuf;
 using System.IO;
 using Newtonsoft.Json;
@@ -36,6 +37,14 @@ namespace QuantConnect.Data.Market
         private Exchange _exchange = QuantConnect.Exchange.UNKNOWN;
         private string _exchangeValue;
         private uint? _parsedSaleCondition;
+        private Dictionary<string, object> _properties;
+
+        /// <summary>
+        /// Optional metadata associated with this tick (e.g. TRF identifiers)
+        /// </summary>
+        [JsonIgnore]
+        [PandasIgnore]
+        public IDictionary<string, object> Properties => _properties ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Type of the Tick: Trade or Quote.
@@ -217,6 +226,10 @@ namespace QuantConnect.Data.Market
             TickType = original.TickType;
             BidSize = original.BidSize;
             AskSize = original.AskSize;
+            if (original._properties != null && original._properties.Count > 0)
+            {
+                _properties = new Dictionary<string, object>(original._properties, StringComparer.OrdinalIgnoreCase);
+            }
         }
 
         /// <summary>
@@ -838,6 +851,34 @@ namespace QuantConnect.Data.Market
             {
                 Value /= 2m;
             }
+        }
+
+        /// <summary>
+        /// Attaches an arbitrary property to this tick. Passing null removes the property.
+        /// </summary>
+        /// <param name="name">Property name</param>
+        /// <param name="value">Property value</param>
+        public void SetProperty(string name, object value)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return;
+            }
+
+            if (value == null)
+            {
+                if (_properties != null)
+                {
+                    _properties.Remove(name);
+                    if (_properties.Count == 0)
+                    {
+                        _properties = null;
+                    }
+                }
+                return;
+            }
+
+            (_properties ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase))[name] = value;
         }
 
         /// <summary>

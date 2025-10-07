@@ -38,7 +38,7 @@ namespace QuantConnect.Packets
         /// <summary>
         /// String-String Dictionary of Brokerage Data for this Live Job
         /// </summary>
-        public Dictionary<string, string> BrokerageData { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> BrokerageData = new Dictionary<string, string>();
 
         /// <summary>
         /// String name of the DataQueueHandler or LiveDataProvider we're running with
